@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>codeCombine</title>
+    <style>
+        :root {
+            --background-color: #0a0a0a;
+            --text-color: #e0e0e0;
+            --button-bg: #222222;
+            --button-hover-bg: #333333;
+            --button-border: #444444;
+            --preview-bg: #1a1a1a;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .logo svg {
+            width: 40px;
+            height: 40px;
+        }
+
+        .instructions {
+            font-size: 1rem;
+            margin-bottom: 30px;
+            color: #a0a0a0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            border: 1px solid var(--button-border);
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            font-family: var(--font-main);
+        }
+
+        .btn:hover {
+            background-color: var(--button-hover-bg);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .preview-area {
+            width: 100%;
+            height: 400px;
+            background-color: var(--preview-bg);
+            color: var(--text-color);
+            border: 1px solid var(--button-border);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        #file-input {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M63 13H28C24.6863 13 22 15.6863 22 19V81C22 84.3137 24.6863 87 28 87H72C75.3137 87 78 84.3137 78 81V33L63 13Z" stroke="#e0e0e0" stroke-width="5" stroke-linejoin="round"/>
+                    <path d="M61 13V35H78" stroke="#e0e0e0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h1>codeCombine</h1>
+        </div>
+        
+        <p class="instructions">Select multiple code files to merge them into a single, formatted text block.</p>
+        
+        <div class="controls">
+            <!-- ADDED the 'accept' attribute for client-side filtering hint -->
+            <input type="file" id="file-input" multiple accept=".txt,.md,.py,.js,.html,.css,.json,.xml,.java,.c,.cpp,.cs,.go,.php,.rb,.rs,.ts,.kt,.sh,text/plain,text/markdown,application/json">
+            
+            <button class="btn" id="upload-btn">Upload Files</button>
+            <button class="btn" id="copy-btn" disabled>Copy to Clipboard</button>
+            <button class="btn" id="save-btn" disabled>Save as .txt</button>
+        </div>
+
+        <textarea id="preview" class="preview-area" readonly placeholder="Your combined code will appear here..."></textarea>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('file-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const saveBtn = document.getElementById('save-btn');
+            const previewArea = document.getElementById('preview');
+
+            let combinedText = "";
+
+            // --- Event Listeners ---
+            
+            uploadBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', (event) => {
+                const files = event.target.files;
+                if (files.length > 0) {
+                    processFiles(files);
+                }
+            });
+
+            copyBtn.addEventListener('click', () => {
+                if (combinedText) {
+                    navigator.clipboard.writeText(combinedText).then(() => {
+                        copyBtn.textContent = "Copied!";
+                        setTimeout(() => { copyBtn.textContent = "Copy to Clipboard"; }, 2000);
+                    }).catch(err => {
+                        console.error("Failed to copy: ", err);
+                        alert("Failed to copy to clipboard.");
+                    });
+                }
+            });
+            
+            saveBtn.addEventListener('click', () => {
+                if (combinedText) {
+                    const blob = new Blob([combinedText], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'combined_code.txt';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
+            });
+            
+
+            // --- Core Functions ---
+
+            // List of allowed text-based file extensions
+            const ALLOWED_EXTENSIONS = [
+                'txt', 'md', 'py', 'js', 'html', 'css', 'json', 'xml', 'java', 'c', 
+                'cpp', 'cs', 'go', 'php', 'rb', 'rs', 'ts', 'kt', 'sh', 'yaml', 'toml'
+            ];
+
+
+            async function processFiles(files) {
+                // --- NEW: Filter files before processing ---
+                const validFiles = [];
+                const rejectedFiles = [];
+
+                for (const file of files) {
+                    const extension = file.name.split('.').pop().toLowerCase();
+                    if (ALLOWED_EXTENSIONS.includes(extension)) {
+                        validFiles.push(file);
+                    } else {
+                        rejectedFiles.push(file.name);
+                    }
+                }
+                
+                // --- NEW: Provide feedback to the user ---
+                if (rejectedFiles.length > 0) {
+                    alert(`Skipped ${rejectedFiles.length} non-text files:\n\n- ${rejectedFiles.join('\n- ')}`);
+                }
+                
+                if (validFiles.length === 0) {
+                     // Reset file input to allow re-uploading the same files later
+                    fileInput.value = '';
+                    return; // Stop if no valid files were selected
+                }
+                
+                let outputLines = [];
+                const fileReadPromises = validFiles.map(readFile); // Process only valid files
+
+                try {
+                    const fileContents = await Promise.all(fileReadPromises);
+                    
+                    for (const fileData of fileContents) {
+                        const { name, content } = fileData;
+                        const extension = name.split('.').pop().toLowerCase();
+                        const lang = getLanguageIdentifier(extension);
+
+                        const formattedBlock = `${name}\n\`\`\`${lang}\n${content}\n\`\`\`\n`;
+                        outputLines.push(formattedBlock);
+                    }
+                    
+                    combinedText = outputLines.join("\n");
+                    previewArea.value = combinedText;
+
+                    copyBtn.disabled = false;
+                    saveBtn.disabled = false;
+
+                } catch (error) {
+                    console.error("Error processing files:", error);
+                    alert("An error occurred while reading the files. Please check the console.");
+                } finally {
+                    fileInput.value = ''; // Reset file input
+                }
+            }
+
+            function readFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve({ name: file.name, content: reader.result });
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsText(file);
+                });
+            }
+
+            function getLanguageIdentifier(extension) {
+                const langMap = {
+                    'py': 'python', 'js': 'javascript', 'html': 'html', 'css': 'css', 
+                    'java': 'java', 'c': 'c', 'cpp': 'cpp', 'cs': 'csharp', 'go': 'go',
+                    'php': 'php', 'rb': 'ruby', 'rs': 'rust', 'ts': 'typescript',
+                    'kt': 'kotlin', 'md': 'markdown', 'json': 'json', 'xml': 'xml', 'sh': 'bash'
+                };
+                return langMap[extension] || '';
+            }
+        });
+    </script>
+
+</body>
+</html>
